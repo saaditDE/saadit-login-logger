@@ -2,11 +2,61 @@
 /**
  * Plugin Name:     SAAD-IT Login Attempts Logger
  * Description:     Plugin logs invalid or valid wp login attempts via a $log_file, including passwords for invalid attempts
- * Version:         1.5
+ * Version:         1.6
  * Author:          ksaadDE
  * Author URI:      https://saad-it.de/
  * Update URI:      https://github.com/saaditDE/saadit-login-logger
  */
+
+define('LOG_RATE_LIMIT', 3); // 3 second rate limit
+
+define('LOG_MAX_LINES', 10000); // Maximum number of lines to keep
+define('LOG_MAX_AGE', 30 * 24 * 60 * 60); // Maximum age in seconds (30 days)
+
+
+// Function to clear old log entries
+function clear_old_log_entries($file_path, $max_age)
+{
+    if (! file_exists ($file_path) )
+        return;
+
+    $lines = file($file_path);
+
+    $new_lines = [];
+
+    foreach ($lines as $index => $line)
+    {
+        if ($index === 0)
+        {
+            $new_lines[] = $line;
+            continue;
+        }
+
+        $log_entry = json_decode($line, true);
+        if (isset($log_entry['timestamp'])) {
+            // Check if the entry is older than max_age
+            if (time() - strtotime($log_entry['timestamp']) < $max_age) {
+                $new_lines[] = $line; // Keep the line if it's within the age limit
+            }
+        }
+    }
+
+    file_put_contents($file_path, implode('', $new_lines));
+}
+
+// Function to enforce line limit
+function enforce_line_limit($file_path, $max_lines)
+{
+    if (! file_exists ($file_path) )
+        return;
+
+    $lines = file($file_path);
+
+    if (count($lines) > $max_lines) {
+        $lines = array_slice($lines, -$max_lines); // Keep only the last max_lines
+        file_put_contents($file_path, implode('', $lines));
+    }
+}
 
 // Exit if accessed directly
 if (!defined('ABSPATH'))
@@ -44,6 +94,13 @@ function checkPassword($user, $password)
 
 function log_login_attempt($user, $error = null)
 {
+    $current_time = time();
+
+    $last_log_time = get_transient('last_log_time');
+
+    if (($current_time - $last_log_time) <= LOG_RATE_LIMIT)
+        return;
+
     // Get the IP address of the user
     $ip_address = $_SERVER['REMOTE_ADDR'];
     $timestamp = current_time('mysql');
@@ -99,7 +156,12 @@ function log_login_attempt($user, $error = null)
         file_put_contents($llog_file, "<?php /*" . PHP_EOL);
     }
 
+    // Clear old entries and enforce line limit
+    clear_old_log_entries($llog_file, LOG_MAX_AGE);
+    enforce_line_limit($llog_file, LOG_MAX_LINES);
+
     file_put_contents($llog_file, json_encode($log_entry) . PHP_EOL, FILE_APPEND);
+    set_transient('last_log_time', $current_time, 12 * HOUR_IN_SECONDS);
 }
 
 
@@ -130,6 +192,12 @@ function custom_admin_menu()
 function display_text_file_content()
 {
     $llog_file = getLogFile();
+
+
+    // Clear old entries and enforce line limit
+    clear_old_log_entries($llog_file, LOG_MAX_AGE);
+    enforce_line_limit($llog_file, LOG_MAX_LINES);
+
     echo '<div class="wrap">';
     echo "<h1>Logged Logins Plugin Overview</h1>";
 
