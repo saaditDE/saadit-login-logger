@@ -2,16 +2,24 @@
 /**
  * Plugin Name:     SAAD-IT Login Attempts Logger
  * Description:     Plugin logs invalid or valid wp login attempts via a $log_file, including passwords for invalid attempts
- * Version:         1.6
+ * Version:         1.7
  * Author:          ksaadDE
  * Author URI:      https://saad-it.de/
  * Update URI:      https://github.com/saaditDE/saadit-login-logger
  */
 
-define('LOG_RATE_LIMIT', 3); // 3 second rate limit
 
-define('LOG_MAX_LINES', 10000); // Maximum number of lines to keep
-define('LOG_MAX_AGE', 30 * 24 * 60 * 60); // Maximum age in seconds (30 days)
+// Exit if accessed directly
+if (!defined('ABSPATH'))
+{
+    exit;
+}
+
+define('LOG_RATE_LIMIT', 7); // 7 second rate limit
+define('MAX_TRIES_ROW', 3); // How many attempts are logged in a row, before timeout
+
+define('LOG_MAX_LINES', 500000); // Maximum number of lines to keep
+define('LOG_MAX_AGE', 3 * 30 * 24 * 60 * 60); // Maximum age in seconds (3*30 days = roughly 3 months)
 
 
 // Function to clear old log entries
@@ -35,7 +43,8 @@ function clear_old_log_entries($file_path, $max_age)
         $log_entry = json_decode($line, true);
         if (isset($log_entry['timestamp'])) {
             // Check if the entry is older than max_age
-            if (time() - strtotime($log_entry['timestamp']) < $max_age) {
+            if (time() - strtotime($log_entry['timestamp']) < $max_age)
+            {
                 $new_lines[] = $line; // Keep the line if it's within the age limit
             }
         }
@@ -44,24 +53,31 @@ function clear_old_log_entries($file_path, $max_age)
     file_put_contents($file_path, implode('', $new_lines));
 }
 
-// Function to enforce line limit
+
 function enforce_line_limit($file_path, $max_lines)
 {
-    if (! file_exists ($file_path) )
-        return;
+    // Check if the file exists
+    if (!file_exists($file_path))
+        return; // Exit the function if the file does not exist
 
-    $lines = file($file_path);
+    // Read the file into an array of lines
+    $lines = file($file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-    if (count($lines) > $max_lines) {
-        $lines = array_slice($lines, -$max_lines); // Keep only the last max_lines
-        file_put_contents($file_path, implode('', $lines));
+    // Check if the number of lines exceeds the limit
+    if (count($lines) > $max_lines)
+    {
+        // Retain the first line
+        $first_line = $lines[0];
+
+        // Calculate how many lines to keep from the end
+        $lines_to_keep = array_slice($lines, -($max_lines - 1)); // Keep the last (max_lines - 1) lines
+
+        // Combine the first line with the lines to keep
+        $lines = array_merge([$first_line], $lines_to_keep);
     }
-}
 
-// Exit if accessed directly
-if (!defined('ABSPATH'))
-{
-    exit;
+    // Write the modified lines back to the file
+    file_put_contents($file_path, implode(PHP_EOL, $lines) . PHP_EOL);
 }
 
 
@@ -98,8 +114,13 @@ function log_login_attempt($user, $error = null)
 
     $last_log_time = get_transient('last_log_time');
 
+    $last_amount = get_transient('last_amount');
+
     if (($current_time - $last_log_time) <= LOG_RATE_LIMIT)
         return;
+
+    // reset after timeout
+    set_transient('last_amount', 0);
 
     // Get the IP address of the user
     $ip_address = $_SERVER['REMOTE_ADDR'];
@@ -114,6 +135,8 @@ function log_login_attempt($user, $error = null)
 
     $correctUsername = getUser($username);
     $correctPW = checkPassword($correctUsername,$password);
+
+
 
     if ($correctUsername)
     {
@@ -161,7 +184,11 @@ function log_login_attempt($user, $error = null)
     enforce_line_limit($llog_file, LOG_MAX_LINES);
 
     file_put_contents($llog_file, json_encode($log_entry) . PHP_EOL, FILE_APPEND);
-    set_transient('last_log_time', $current_time, 12 * HOUR_IN_SECONDS);
+
+    set_transient('last_amount', $last_amount+1); // increase tries that were in a row
+
+    if ($last_amount >= MAX_TRIES_ROW) // if tries in a row exceed the defined max val
+        set_transient('last_log_time', $current_time, 12 * HOUR_IN_SECONDS); // Apply timeout
 }
 
 
