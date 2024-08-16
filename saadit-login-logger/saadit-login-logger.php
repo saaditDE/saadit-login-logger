@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     SAAD-IT Login Attempts Logger
  * Description:     Plugin logs invalid or valid wp login attempts via a $log_file, including passwords for invalid attempts
- * Version:         1.3
+ * Version:         1.4
  * Author:          ksaadDE
  * Author URI:      https://saad-it.de/
  * Update URI:      https://github.com/saaditDE/saadit-login-logger
@@ -174,51 +174,60 @@ add_filter( 'update_plugins_github.com', 'self_update', 10, 4 );
  */
 function self_update( $update, array $plugin_data, string $plugin_file, $locales ) {
 
-	// only check this plugin
-	if ( 'saadit-login-logger/saadit-login-logger.php' !== $plugin_file ) {
-		return $update;
-	}
+    try
+    {
+        // only check this plugin
+        if ( 'saadit-login-logger/saadit-login-logger.php' !== $plugin_file ) {
+            return $update;
+        }
 
-	// already completed update check elsewhere
-	if ( ! empty( $update ) ) {
-		return $update;
-	}
+        // already completed update check elsewhere
+        if ( ! empty( $update ) ) {
+            return $update;
+        }
 
-	// let's go get the latest version number from GitHub
-	$response = wp_remote_get(
-		'https://api.github.com/repos/saaditDE/saadit-login-logger/releases/latest',
-		array(
-			'user-agent' => 'saaditDE',
-		)
-	);
+        // let's go get the latest version number from GitHub
+        $response = wp_remote_get(
+            'https://api.github.com/repos/saaditDE/saadit-login-logger/releases/latest',
+            array(
+                'user-agent' => 'ksaadDE',
+            )
+        );
 
-	if ( is_wp_error( $response ) ) {
-		return;
-	} else {
-		$output = json_decode( wp_remote_retrieve_body( $response ), true );
-	}
+        if ( is_wp_error( $response ) ) {
+            return;
+        } else {
+            $output = json_decode( wp_remote_retrieve_body( $response ), true );
+        }
 
-	$new_version_number  = $output['tag_name'];
-	$is_update_available = version_compare( $plugin_data['Version'], $new_version_number, '<' );
+        $new_version_number  = $output['tag_name'];
+        $is_update_available = version_compare( $plugin_data['Version'], $new_version_number, '<' );
 
-	if ( ! $is_update_available ) {
-		return false;
-	}
+        if ( ! $is_update_available ) {
+            return false;
+        }
 
-	$new_url     = $output['html_url'];
-	$new_package = $output['assets'][0]['browser_download_url'];
+        $new_url     = $output['html_url'];
+        $new_package = $output['assets'][0]['browser_download_url'];
 
-	error_log('$plugin_data: ' . print_r( $plugin_data, true ));
-	error_log('$new_version_number: ' . $new_version_number );
-	error_log('$new_url: ' . $new_url );
-	error_log('$new_package: ' . $new_package );
+        error_log('$plugin_data: ' . print_r( $plugin_data, true ));
+        error_log('$new_version_number: ' . $new_version_number );
+        error_log('$new_url: ' . $new_url );
+        error_log('$new_package: ' . $new_package );
 
-	return array(
-		'slug'    => $plugin_data['TextDomain'],
-		'version' => $new_version_number,
-		'url'     => $new_url,
-		'package' => $new_package,
-	);
+        return array(
+            'slug'    => $plugin_data['TextDomain'],
+            'version' => $new_version_number,
+            'url'     => $new_url,
+            'package' => $new_package,
+        );
+
+    }
+    catch (Exception $e)
+    {
+            //print_r($e);
+            return $plugin_data;
+    }
 }
 
 ?>
