@@ -8,7 +8,7 @@
 - Stores the failed passwords, redacts passwords when successful login attempt (to avoid sensitive information leaks)
 - Logfile is a phpfile, protecting the sensitive information
 - built-in time-based rate limiting (3 seconds)
-- built-in log rotation (after 30 days or 10k lines)
+- built-in log rotation (after 30 days or 500k lines)
 - no readme.txt in the zip
 
 ![ss_saadit_logger.png](https://github.com/saaditDE/saadit-login-logger/blob/main/screenshots/ss_saadit_logger.png?raw=true)
