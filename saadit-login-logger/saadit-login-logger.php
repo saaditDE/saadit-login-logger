@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     SAAD-IT Login Attempts Logger
  * Description:     Plugin logs invalid or valid wp login attempts via a $log_file, including passwords for invalid attempts
- * Version:         1.2
+ * Version:         1.3
  * Author:          ksaadDE
  * Author URI:      https://saad-it.de/
  * Update URI:      https://github.com/saaditDE/saadit-login-logger
