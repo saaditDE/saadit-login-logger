@@ -10,3 +10,5 @@
 - built-in time-based rate limiting (3 seconds)
 - built-in log rotation (after 30 days or 10k lines)
 - no readme.txt in the zip
+
+![ss_saadit_logger.png](https://github.com/saaditDE/saadit-login-logger/blob/main/screenshots/ss_saadit_logger.png?raw=true)
