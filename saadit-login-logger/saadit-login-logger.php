@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     SAAD-IT Login Attempts Logger
  * Description:     Plugin logs invalid or valid wp login attempts via a $log_file, including passwords for invalid attempts
- * Version:         1.4
+ * Version:         1.5
  * Author:          ksaadDE
  * Author URI:      https://saad-it.de/
  * Update URI:      https://github.com/saaditDE/saadit-login-logger
@@ -172,10 +172,8 @@ add_filter( 'update_plugins_github.com', 'self_update', 10, 4 );
  *
  * source: https://nickgreen.info/add-autoupdates-to-your-wordpress-plugin-thats-hosted-on-github-using-update_plugins_hostname/
  */
-function self_update( $update, array $plugin_data, string $plugin_file, $locales ) {
-
-    try
-    {
+function self_update( $update, array $plugin_data, string $plugin_file, $locales )
+{
         // only check this plugin
         if ( 'saadit-login-logger/saadit-login-logger.php' !== $plugin_file ) {
             return $update;
@@ -194,11 +192,11 @@ function self_update( $update, array $plugin_data, string $plugin_file, $locales
             )
         );
 
-        if ( is_wp_error( $response ) ) {
+        if ( is_wp_error( $response ) )
             return;
-        } else {
-            $output = json_decode( wp_remote_retrieve_body( $response ), true );
-        }
+
+        $output = json_decode(wp_remote_retrieve_body( $response ), true);
+
 
         $new_version_number  = $output['tag_name'];
         $is_update_available = version_compare( $plugin_data['Version'], $new_version_number, '<' );
@@ -210,10 +208,11 @@ function self_update( $update, array $plugin_data, string $plugin_file, $locales
         $new_url     = $output['html_url'];
         $new_package = $output['assets'][0]['browser_download_url'];
 
+        /*
         error_log('$plugin_data: ' . print_r( $plugin_data, true ));
         error_log('$new_version_number: ' . $new_version_number );
         error_log('$new_url: ' . $new_url );
-        error_log('$new_package: ' . $new_package );
+        error_log('$new_package: ' . $new_package );*/
 
         return array(
             'slug'    => $plugin_data['TextDomain'],
@@ -221,13 +220,6 @@ function self_update( $update, array $plugin_data, string $plugin_file, $locales
             'url'     => $new_url,
             'package' => $new_package,
         );
-
-    }
-    catch (Exception $e)
-    {
-            //print_r($e);
-            return $plugin_data;
-    }
 }
 
 ?>
